@@ -70,7 +70,7 @@ class AppAuthController extends Controller
             'phone' => 'nullable|string',
         ]);
 
-        $contact = $request->email ?? $request->phone;
+        $contact =  $request->email ?? $request->phone;
 
         if (!$contact) {
             return response()->json(['error' => 'Email or phone is required.'], 422);

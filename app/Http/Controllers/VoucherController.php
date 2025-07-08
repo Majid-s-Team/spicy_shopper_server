@@ -3,13 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Voucher;
+use App\Models\OrderVoucherUsage;
 use Illuminate\Http\Request;
 
 class VoucherController extends Controller
 {
     public function index()
     {
-        return Voucher::all();
+        $vouchers = Voucher::all();
+        return $this->apiResponse('Vouchers fetched successfully.', $vouchers);
     }
 
     public function store(Request $request)
@@ -22,14 +24,16 @@ class VoucherController extends Controller
         ]);
 
         $voucher = Voucher::create($request->all());
-        return response()->json($voucher);
-    }
-    public function usages($voucherId)
-{
-    $usages = \App\Models\OrderVoucherUsage::with(['user', 'order'])
-                ->where('voucher_id', $voucherId)
-                ->get();
 
-    return response()->json($usages);
-}
+        return $this->apiResponse('Voucher created successfully.', $voucher, 201);
+    }
+
+    public function usages($voucherId)
+    {
+        $usages = OrderVoucherUsage::with(['user', 'order'])
+                    ->where('voucher_id', $voucherId)
+                    ->get();
+
+        return $this->apiResponse('Voucher usages fetched successfully.', $usages);
+    }
 }

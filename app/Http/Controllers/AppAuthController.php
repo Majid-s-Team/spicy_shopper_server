@@ -43,7 +43,11 @@ class AppAuthController extends Controller
 
         $token = JWTAuth::fromUser($user);
 
-        return response()->json(['token' => $token, 'user' => $user]);
+        // return response()->json(['token' => $token, 'data' => $user]);
+        return $this->apiResponse('Registration successful', [
+    'token' => $token,
+    'user' => $user
+], 201);
     }
 
     public function login(Request $request)
@@ -60,7 +64,11 @@ class AppAuthController extends Controller
             return response()->json(['error' => 'Only buyer login allowed here.'], 403);
         }
 
-        return response()->json(['token' => $token, 'user' => $user]);
+        // return response()->json(['token' => $token, 'user' => $user]);
+        return $this->apiResponse('Login successful', [
+    'token' => $token,
+    'user' => $user
+]);
     }
 
         public function forgotPassword(Request $request)
@@ -90,7 +98,9 @@ class AppAuthController extends Controller
             });
         }
 
-        return response()->json(['message' => 'OTP sent successfully.']);
+        // return response()->json(['message' => 'OTP sent successfully.']);
+        return $this->apiResponse('OTP sent successfully');
+
     }
 
     public function verifyOtp(Request $request)
@@ -115,7 +125,9 @@ class AppAuthController extends Controller
 
         $otpRecord->update(['is_verified' => true]);
 
-        return response()->json(['message' => 'OTP verified successfully.']);
+        // return response()->json(['message' => 'OTP verified successfully.']);
+        return $this->apiResponse('OTP verified successfully');
+
     }
 
     public function resetPassword(Request $request)
@@ -154,6 +166,8 @@ class AppAuthController extends Controller
         // Clean up
         $otpRecord->delete();
 
-        return response()->json(['message' => 'Password reset successful.']);
+        // return response()->json(['message' => 'Password reset successful.']);
+        return $this->apiResponse('Password reset successful');
+
     }
 }

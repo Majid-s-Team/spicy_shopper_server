@@ -31,7 +31,9 @@ class ProductCategoryController extends Controller
             }
 
             $category = $query->firstOrFail();
-            return response()->json($category);
+            // return response()->json($category);
+            return $this->apiResponse('Category fetched', $category);
+
         }
 
         $query = ProductCategory::query();
@@ -39,8 +41,10 @@ class ProductCategoryController extends Controller
         if (!$isBuyer) {
             $query->where('user_id', $user->id);
         }
+        $paginated = $this->paginateQuery($query->latest());
+        return $this->apiResponse('Categories fetched', $paginated);
 
-        return $this->paginateQuery($query->latest());
+        // return $this->paginateQuery($query->latest());
     }
 
     public function store(Request $request)
@@ -51,9 +55,11 @@ class ProductCategoryController extends Controller
         ]);
 
         if (auth()->user()->hasRole('buyer')) {
-            return response()->json([
-                'message' => 'Buyers are not allowed to add product categories.'
-            ], 403);
+            // return response()->json([
+            //     'message' => 'Buyers are not allowed to add product categories.'
+            // ], 403);
+            return $this->apiResponse('Buyers are not allowed to add product categories.', null, 403);
+
         }
 
         $imagePath = null;
@@ -68,7 +74,7 @@ class ProductCategoryController extends Controller
             'user_id' => auth()->id(),
         ]);
 
-        return response()->json($category, 201);
+        return $this->apiResponse('Category created successfully', $category, 201);
     }
 
     public function show($id)
@@ -77,15 +83,13 @@ class ProductCategoryController extends Controller
             ->where('user_id', auth()->id())
             ->firstOrFail();
 
-        return $cat;
+        return $this->apiResponse('Category fetched', $cat);
     }
 
     public function update(Request $request, $id)
     {
         if (auth()->user()->hasRole('buyer')) {
-            return response()->json([
-                'message' => 'Buyers are not allowed to update product categories.'
-            ], 403);
+            return $this->apiResponse('Buyers are not allowed to update product categories.', null, 403);
         }
 
         $request->validate([
@@ -108,7 +112,7 @@ class ProductCategoryController extends Controller
         $cat->name = $request->name;
         $cat->save();
 
-        return response()->json($cat);
+        return $this->apiResponse('Category updated', $cat);
     }
 
     public function destroy($id)
@@ -129,30 +133,30 @@ class ProductCategoryController extends Controller
 
         $cat->delete();
 
-        return response()->json(['message' => 'Deleted']);
+        return $this->apiResponse('Category deleted successfully');
     }
 
-public function showWithProducts($id)
-{
-    $user = auth()->user();
+    public function showWithProducts($id)
+    {
+        $user = auth()->user();
 
-    $query = ProductCategory::with([
-        'products' => function ($q) use ($user) {
-            if (!$user->hasRole('buyer')) {
-                $q->where('user_id', $user->id);
-            }
-            $q->with(['unit', 'seller']); 
-        },
-        'seller' 
-    ])->where('id', $id);
+        $query = ProductCategory::with([
+            'products' => function ($q) use ($user) {
+                if (!$user->hasRole('buyer')) {
+                    $q->where('user_id', $user->id);
+                }
+                $q->with(['unit', 'seller']);
+            },
+            'seller'
+        ])->where('id', $id);
 
-    if (!$user->hasRole('buyer')) {
-        $query->where('user_id', $user->id);
+        if (!$user->hasRole('buyer')) {
+            $query->where('user_id', $user->id);
+        }
+
+        $category = $query->firstOrFail();
+
+        return $this->apiResponse('Category with products fetched', $category);
     }
-
-    $category = $query->firstOrFail();
-
-    return response()->json($category);
-}
 
 }

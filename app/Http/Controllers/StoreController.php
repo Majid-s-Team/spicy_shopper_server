@@ -16,7 +16,7 @@ class StoreController extends Controller
         $user = auth()->user();
 
         if (!$user) {
-            return response()->json(['message' => 'Unauthenticated.'], 401);
+            return $this->apiResponse('Unauthenticated.', null, 401);
         }
 
         $isBuyer = $user->hasRole('buyer');
@@ -29,7 +29,7 @@ class StoreController extends Controller
             }
 
             $store = $query->firstOrFail();
-            return response()->json($store);
+            return $this->apiResponse('Store fetched successfully', $store);
         }
 
         $query = Store::with(['category', 'user']);
@@ -38,13 +38,13 @@ class StoreController extends Controller
             $query->where('user_id', $user->id);
         }
 
-        return $this->paginateQuery($query->latest());
+        return $this->apiResponse('Stores fetched successfully', $this->paginateQuery($query->latest()));
     }
 
     public function store(Request $request)
     {
         if (auth()->user()->hasRole('buyer')) {
-            return response()->json(['message' => 'Buyers are not allowed to add stores.'], 403);
+            return $this->apiResponse('Buyers are not allowed to add stores.', null, 403);
         }
 
         $request->validate([
@@ -68,7 +68,7 @@ class StoreController extends Controller
             'image' => $imagePath,
         ]);
 
-        return response()->json($store, 201);
+        return $this->apiResponse('Store created successfully', $store, 201);
     }
 
     public function show($id)
@@ -77,13 +77,13 @@ class StoreController extends Controller
             ->where('user_id', auth()->id())
             ->firstOrFail();
 
-        return $store;
+        return $this->apiResponse('Store fetched successfully', $store);
     }
 
     public function update(Request $request, $id)
     {
         if (auth()->user()->hasRole('buyer')) {
-            return response()->json(['message' => 'Buyers are not allowed to update stores.'], 403);
+            return $this->apiResponse('Buyers are not allowed to update stores.', null, 403);
         }
 
         $request->validate([
@@ -108,13 +108,13 @@ class StoreController extends Controller
         $store->store_category_id = $request->store_category_id;
         $store->save();
 
-        return response()->json($store);
+        return $this->apiResponse('Store updated successfully', $store);
     }
 
     public function destroy($id)
     {
         if (auth()->user()->hasRole('buyer')) {
-            return response()->json(['message' => 'Buyers are not allowed to delete stores.'], 403);
+            return $this->apiResponse('Buyers are not allowed to delete stores.', null, 403);
         }
 
         $store = Store::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
@@ -125,6 +125,6 @@ class StoreController extends Controller
 
         $store->delete();
 
-        return response()->json(['message' => 'Deleted']);
+        return $this->apiResponse('Store deleted successfully');
     }
 }

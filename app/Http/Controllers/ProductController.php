@@ -16,7 +16,9 @@ class ProductController extends Controller
         $user = auth()->user();
 
         if (!$user) {
-            return response()->json(['message' => 'Unauthenticated.'], 401);
+            // return response()->json(['message' => 'Unauthenticated.'], 401);
+            return $this->apiResponse('Unauthenticated.', null, 401);
+
         }
 
         $isBuyer = $user->hasRole('buyer');
@@ -29,7 +31,9 @@ class ProductController extends Controller
             }
 
             $product = $query->firstOrFail();
-            return response()->json($product);
+            // return response()->json($product);
+            return $this->apiResponse('Product fetched successfully', $product);
+
         }
 
         $query = Product::with(['store', 'category', 'unit']);
@@ -37,14 +41,18 @@ class ProductController extends Controller
         if (!$isBuyer) {
             $query->where('user_id', $user->id);
         }
+        $paginated = $this->paginateQuery($query->latest());
+        return $this->apiResponse('Products fetched successfully', $paginated);
 
-        return $this->paginateQuery($query->latest());
+        // return $this->paginateQuery($query->latest());
     }
 
     public function store(Request $request)
     {
         if (auth()->user()->hasRole('buyer')) {
-            return response()->json(['message' => 'Buyers are not allowed to add products.'], 403);
+            // return response()->json(['message' => 'Buyers are not allowed to add products.'], 403);
+            return $this->apiResponse('Buyers are not allowed to add products.', null, 403);
+
         }
 
         $request->validate([
@@ -78,7 +86,9 @@ class ProductController extends Controller
             'user_id' => auth()->id(),
         ]);
 
-        return response()->json($product, 201);
+        // return response()->json($product, 201);
+        return $this->apiResponse('Product created successfully', $product, 201);
+
     }
 
     public function show($id)
@@ -88,13 +98,16 @@ class ProductController extends Controller
             ->with(['store', 'category', 'unit'])
             ->firstOrFail();
 
-        return response()->json($product);
+        // return response()->json($product);
+        return $this->apiResponse('Product details fetched', $product);
+
     }
 
     public function update(Request $request, $id)
     {
         if (auth()->user()->hasRole('buyer')) {
-            return response()->json(['message' => 'Buyers are not allowed to update products.'], 403);
+            return $this->apiResponse('Buyers are not allowed to update products.', null, 403);
+
         }
 
         $request->validate([
@@ -130,13 +143,13 @@ class ProductController extends Controller
             'unit_id' => $request->unit_id,
         ]);
 
-        return response()->json($product);
+        return $this->apiResponse('Product updated successfully', $product);
     }
 
     public function destroy($id)
     {
-        if (auth()->user()->hasRole('buyer')) {
-            return response()->json(['message' => 'Buyers are not allowed to delete products.'], 403);
+       if (auth()->user()->hasRole('buyer')) {
+            return $this->apiResponse('Buyers are not allowed to delete products.', null, 403);
         }
 
         $product = Product::where('id', $id)
@@ -149,6 +162,8 @@ class ProductController extends Controller
 
         $product->delete();
 
-        return response()->json(['message' => 'Product deleted']);
+        // return response()->json(['message' => 'Product deleted']);
+        return $this->apiResponse('Product deleted successfully');
+
     }
 }

@@ -10,13 +10,14 @@ class BannerController extends Controller
 {
     public function index()
     {
-        return response()->json(Banner::latest()->get());
+        $banners = Banner::latest()->get();
+        return $this->apiResponse('Banners fetched successfully.', $banners);
     }
 
     public function store(Request $request)
     {
         if (auth()->user()->hasRole('buyer')) {
-            return response()->json(['message' => 'Buyers are not allowed to create banners.'], 403);
+            return $this->apiResponse('Buyers are not allowed to create banners.', null, 403);
         }
 
         $request->validate([
@@ -34,18 +35,19 @@ class BannerController extends Controller
             'image' => $imagePath,
         ]);
 
-        return response()->json($banner, 201);
+        return $this->apiResponse('Banner created successfully.', $banner, 201);
     }
 
     public function show($id)
     {
-        return response()->json(Banner::findOrFail($id));
+        $banner = Banner::findOrFail($id);
+        return $this->apiResponse('Banner retrieved successfully.', $banner);
     }
 
     public function update(Request $request, $id)
     {
         if (auth()->user()->hasRole('buyer')) {
-            return response()->json(['message' => 'Buyers are not allowed to update banners.'], 403);
+            return $this->apiResponse('Buyers are not allowed to update banners.', null, 403);
         }
 
         $request->validate([
@@ -66,25 +68,30 @@ class BannerController extends Controller
         $banner->title = $request->title;
         $banner->save();
 
-        return response()->json($banner);
+        return $this->apiResponse('Banner updated successfully.', $banner);
     }
 
     public function destroy($id)
     {
         if (auth()->user()->hasRole('buyer')) {
-            return response()->json(['message' => 'Buyers are not allowed to delete banners.'], 403);
+            return $this->apiResponse('Buyers are not allowed to delete banners.', null, 403);
         }
 
         $banner = Banner::findOrFail($id);
+
+        if ($banner->image && Storage::disk('public')->exists($banner->image)) {
+            Storage::disk('public')->delete($banner->image);
+        }
+
         $banner->delete();
 
-        return response()->json(['message' => 'Banner deleted']);
+        return $this->apiResponse('Banner deleted successfully.');
     }
 
     public function changeStatus(Request $request, $id)
     {
         if (auth()->user()->hasRole('buyer')) {
-            return response()->json(['message' => 'Buyers are not allowed to change status.'], 403);
+            return $this->apiResponse('Buyers are not allowed to change status.', null, 403);
         }
 
         $request->validate([
@@ -95,6 +102,6 @@ class BannerController extends Controller
         $banner->status = $request->status;
         $banner->save();
 
-        return response()->json(['message' => 'Status updated', 'banner' => $banner]);
+        return $this->apiResponse('Status updated successfully.', $banner);
     }
 }

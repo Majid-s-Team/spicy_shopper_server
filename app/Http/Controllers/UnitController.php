@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -14,7 +15,7 @@ class UnitController extends Controller
         $user = auth()->user();
 
         if (!$user) {
-            return response()->json(['message' => 'Unauthenticated.'], 401);
+            return $this->apiResponse('Unauthenticated.', null, 401);
         }
 
         $isBuyer = $user->hasRole('buyer');
@@ -27,7 +28,7 @@ class UnitController extends Controller
             }
 
             $unit = $query->firstOrFail();
-            return response()->json($unit);
+            return $this->apiResponse('Unit fetched successfully.', $unit);
         }
 
         $query = Unit::query();
@@ -36,13 +37,13 @@ class UnitController extends Controller
             $query->where('user_id', $user->id);
         }
 
-        return $this->paginateQuery($query->latest());
+        return $this->apiResponse('Units fetched successfully.', $this->paginateQuery($query->latest()));
     }
 
     public function store(Request $request)
     {
         if (auth()->user()->hasRole('buyer')) {
-            return response()->json(['message' => 'Buyers are not allowed to add units.'], 403);
+            return $this->apiResponse('Buyers are not allowed to add units.', null, 403);
         }
 
         $request->validate(['name' => 'required|string|max:255']);
@@ -52,13 +53,13 @@ class UnitController extends Controller
             'user_id' => auth()->id(),
         ]);
 
-        return response()->json($unit, 201);
+        return $this->apiResponse('Unit created successfully.', $unit, 201);
     }
 
     public function update(Request $request, $id)
     {
         if (auth()->user()->hasRole('buyer')) {
-            return response()->json(['message' => 'Buyers are not allowed to update units.'], 403);
+            return $this->apiResponse('Buyers are not allowed to update units.', null, 403);
         }
 
         $request->validate(['name' => 'required|string|max:255']);
@@ -67,18 +68,18 @@ class UnitController extends Controller
         $unit->name = $request->name;
         $unit->save();
 
-        return response()->json($unit);
+        return $this->apiResponse('Unit updated successfully.', $unit);
     }
 
     public function destroy($id)
     {
         if (auth()->user()->hasRole('buyer')) {
-            return response()->json(['message' => 'Buyers are not allowed to delete units.'], 403);
+            return $this->apiResponse('Buyers are not allowed to delete units.', null, 403);
         }
 
         $unit = Unit::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
         $unit->delete();
 
-        return response()->json(['message' => 'Deleted']);
+        return $this->apiResponse('Unit deleted successfully.');
     }
 }

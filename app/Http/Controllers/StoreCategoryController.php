@@ -2,25 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\{Store, StoreCategory, Product, ProductCategory, Unit, User};
+use App\Models\{StoreCategory};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use App\Traits\Paginatable;
-use Spatie\Permission\Traits\HasRoles;
-use Paginator;
+
 class StoreCategoryController extends Controller
 {
     use Paginatable;
 
     public function index(Request $request, $id = null)
     {
-
         $user = auth()->user();
 
         if (!$user) {
-            return response()->json([
-                'message' => 'Unauthenticated.'
-            ], 401);
+            return $this->apiResponse('Unauthenticated.', null, 401);
         }
 
         $isBuyer = $user->hasRole('buyer');
@@ -33,7 +29,7 @@ class StoreCategoryController extends Controller
             }
 
             $category = $query->firstOrFail();
-            return response()->json($category);
+            return $this->apiResponse('Category fetched successfully', $category);
         }
 
         $query = StoreCategory::query();
@@ -42,7 +38,7 @@ class StoreCategoryController extends Controller
             $query->where('user_id', $user->id);
         }
 
-        return $this->paginateQuery($query->latest());
+        return $this->apiResponse('Categories fetched successfully', $this->paginateQuery($query->latest()));
     }
 
     public function store(Request $request)
@@ -53,9 +49,7 @@ class StoreCategoryController extends Controller
         ]);
 
         if (auth()->user()->hasRole('buyer')) {
-            return response()->json([
-                'message' => 'Buyers are not allowed to add categories.'
-            ], 403);
+            return $this->apiResponse('Buyers are not allowed to add categories.', null, 403);
         }
 
         $imagePath = null;
@@ -70,7 +64,7 @@ class StoreCategoryController extends Controller
             'user_id' => auth()->id(),
         ]);
 
-        return response()->json($category, 201);
+        return $this->apiResponse('Category created successfully', $category, 201);
     }
 
     public function show($id)
@@ -78,23 +72,20 @@ class StoreCategoryController extends Controller
         $cat = StoreCategory::where('id', $id)
             ->where('user_id', auth()->id())
             ->firstOrFail();
-        return response()->json($cat, 201);
-    }
 
+        return $this->apiResponse('Category fetched successfully', $cat);
+    }
 
     public function update(Request $request, $id)
     {
         if (auth()->user()->hasRole('buyer')) {
-            return response()->json([
-                'message' => 'Buyers are not allowed to update categories.'
-            ], 403);
+            return $this->apiResponse('Buyers are not allowed to update categories.', null, 403);
         }
 
         $request->validate([
             'name' => 'required',
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
-
 
         $cat = StoreCategory::where('id', $id)
             ->where('user_id', auth()->id())
@@ -111,14 +102,13 @@ class StoreCategoryController extends Controller
         $cat->name = $request->name;
         $cat->save();
 
-        return response()->json($cat);
+        return $this->apiResponse('Category updated successfully', $cat);
     }
+
     public function destroy($id)
     {
         if (auth()->user()->hasRole('buyer')) {
-            return response()->json([
-                'message' => 'Buyers are not allowed to delete categories.'
-            ], 403);
+            return $this->apiResponse('Buyers are not allowed to delete categories.', null, 403);
         }
 
         $cat = StoreCategory::where('id', $id)
@@ -131,8 +121,9 @@ class StoreCategoryController extends Controller
 
         $cat->delete();
 
-        return response()->json(['message' => 'Deleted']);
+        return $this->apiResponse('Category deleted successfully');
     }
+
     public function showWithStores($id)
     {
         $user = auth()->user();
@@ -151,9 +142,6 @@ class StoreCategoryController extends Controller
 
         $category = $query->firstOrFail();
 
-        return response()->json($category);
+        return $this->apiResponse('Category with stores fetched successfully', $category);
     }
-
-
-
 }

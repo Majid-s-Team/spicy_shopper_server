@@ -42,8 +42,11 @@ class CartOrderController extends Controller
                 'status' => 'success'
             ];
         }
+        
+        return $this->apiResponse('Cart updated', $responses);
 
-        return response()->json($responses);
+
+        // return response()->json($responses);
     }
     public function updateCartItem(Request $request, $cartId)
     {
@@ -59,7 +62,9 @@ class CartOrderController extends Controller
 
         $cart->update(['quantity' => $request->quantity]);
 
-        return response()->json(['message' => 'Cart updated.', 'cart' => $cart]);
+        // return response()->json(['message' => 'Cart updated.', 'cart' => $cart]);
+        return $this->apiResponse('Cart updated.', $cart);
+
     }
 
     public function removeCartItem($cartId)
@@ -67,18 +72,22 @@ class CartOrderController extends Controller
         $cart = Cart::where('id', $cartId)->where('user_id', auth()->id())->firstOrFail();
         $cart->delete();
 
-        return response()->json(['message' => 'Item removed from cart.']);
+        // return response()->json(['message' => 'Item removed from cart.']);
+        return $this->apiResponse('Item removed from cart.');
+
     }
     public function clearCart()
     {
         Cart::where('user_id', auth()->id())->delete();
-        return response()->json(['message' => 'All items removed from cart.']);
+        // return response()->json(['message' => 'All items removed from cart.']);
+        return $this->apiResponse('All items removed from cart.');
+
     }
     public function getCart()
     {
         $cartItems = Cart::with('product')->where('user_id', auth()->id())->get();
 
-        return response()->json([
+        return $this->apiResponse('Cart fetched', [
             'cart' => $cartItems,
             'total_items' => $cartItems->count(),
             'total_price' => $cartItems->sum(fn($item) => $item->product->price * $item->quantity)
@@ -97,7 +106,9 @@ class CartOrderController extends Controller
 
         $cartItems = Cart::with('product')->where('user_id', auth()->id())->get();
         if ($cartItems->isEmpty()) {
-            return response()->json(['message' => 'Cart is empty.'], 400);
+            // return response()->json(['message' => 'Cart is empty.'], 400);
+                        return $this->apiResponse('Cart is empty.', null, 400);
+
         }
 
         DB::beginTransaction();
@@ -120,7 +131,9 @@ class CartOrderController extends Controller
                         $discount = ($total * $voucher->discount_percent) / 100;
                     }
                 } else {
-                    return response()->json(['message' => 'Invalid or expired voucher.'], 400);
+                    // return response()->json(['message' => 'Invalid or expired voucher.'], 400);
+                                        return $this->apiResponse('Invalid or expired voucher.', null, 400);
+
                 }
             }
 
@@ -157,15 +170,22 @@ class CartOrderController extends Controller
             Cart::where('user_id', auth()->id())->delete();
 
             DB::commit();
-            return response()->json([
-                'message' => 'Order placed successfully',
+            // return response()->json([
+            //     'message' => 'Order placed successfully',
+            //     'order' => $order,
+            //     'discount' => $discount,
+            //     'total_before_discount' => $total
+            // ]);
+             return $this->apiResponse('Order placed successfully', [
                 'order' => $order,
                 'discount' => $discount,
                 'total_before_discount' => $total
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => $e->getMessage()], 400);
+            // return response()->json(['error' => $e->getMessage()], 400);
+            return $this->apiResponse($e->getMessage(), null, 400);
+
         }
     }
 }

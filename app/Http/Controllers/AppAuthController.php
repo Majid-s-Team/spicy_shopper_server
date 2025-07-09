@@ -170,4 +170,46 @@ class AppAuthController extends Controller
         return $this->apiResponse('Password reset successful');
 
     }
+
+    public function getProfile()
+{
+    $user = auth()->user();
+    return $this->apiResponse('User profile fetched successfully', $user);
+}
+
+public function updateProfile(Request $request)
+{
+    $user = auth()->user();
+
+    $request->validate([
+        'name'     => 'sometimes|string|max:255',
+        'phone'    => 'sometimes|string|max:20',
+        'dob'      => 'nullable|date',
+        'gender'   => 'nullable|in:male,female,other',
+        'language' => 'nullable|string',
+        'location' => 'nullable|string',
+        'profile_image'    => 'nullable|string',
+    ]);
+
+    $user->update($request->only(['name', 'phone', 'dob', 'gender', 'language', 'location','profile_image']));
+
+    return $this->apiResponse('Profile updated successfully', $user);
+}
+
+public function uploadProfileImage(Request $request)
+{
+    $request->validate([
+        'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048'
+    ]);
+
+    $file = $request->file('image');
+    $filename = 'profile_' . time() . '.' . $file->getClientOriginalExtension();
+    $path = $file->storeAs('public/profile_images', $filename);
+
+    $url = asset(str_replace('public/', 'storage/', $path));
+
+    return $this->apiResponse('Image uploaded successfully', ['url' => $url]);
+}
+
+
 }

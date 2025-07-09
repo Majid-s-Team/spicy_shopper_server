@@ -23,6 +23,8 @@ class ProductCategoryController extends Controller
 
         $isBuyer = $user->hasRole('buyer');
 
+        $searchName = $request->query('name');
+
         if ($id) {
             $query = ProductCategory::where('id', $id);
 
@@ -31,21 +33,61 @@ class ProductCategoryController extends Controller
             }
 
             $category = $query->firstOrFail();
-            // return response()->json($category);
             return $this->apiResponse('Category fetched', $category);
-
         }
+
 
         $query = ProductCategory::query();
 
         if (!$isBuyer) {
             $query->where('user_id', $user->id);
         }
-        $paginated = $this->paginateQuery($query->latest());
-        return $this->apiResponse('Categories fetched', $paginated);
 
-        // return $this->paginateQuery($query->latest());
+        if ($searchName) {
+            $query->where('name', 'LIKE', '%' . $searchName . '%');
+        }
+
+        $paginated = $this->paginateQuery($query->latest());
+
+        return $this->apiResponse('Categories fetched', $paginated);
     }
+
+
+    // public function index(Request $request, $id = null)
+    // {
+    //     $user = auth()->user();
+
+    //     if (!$user) {
+    //         return response()->json([
+    //             'message' => 'Unauthenticated.'
+    //         ], 401);
+    //     }
+
+    //     $isBuyer = $user->hasRole('buyer');
+
+    //     if ($id) {
+    //         $query = ProductCategory::where('id', $id);
+
+    //         if (!$isBuyer) {
+    //             $query->where('user_id', $user->id);
+    //         }
+
+    //         $category = $query->firstOrFail();
+    //         // return response()->json($category);
+    //         return $this->apiResponse('Category fetched', $category);
+
+    //     }
+
+    //     $query = ProductCategory::query();
+
+    //     if (!$isBuyer) {
+    //         $query->where('user_id', $user->id);
+    //     }
+    //     $paginated = $this->paginateQuery($query->latest());
+    //     return $this->apiResponse('Categories fetched', $paginated);
+
+    //     // return $this->paginateQuery($query->latest());
+    // }
 
     public function store(Request $request)
     {
@@ -158,5 +200,45 @@ class ProductCategoryController extends Controller
 
         return $this->apiResponse('Category with products fetched', $category);
     }
+
+
+   public function allCategoriesWithProducts(Request $request)
+{
+    $user = auth()->user();
+
+    $categoryName = $request->query('category_name');
+    $productName = $request->query('product_name');
+
+    $query = ProductCategory::with([
+        'products' => function ($q) use ($user, $productName) {
+            if (!$user->hasRole('buyer')) {
+                $q->where('user_id', $user->id);
+            }
+
+            if ($productName) {
+                $q->where('name', 'like', '%' . $productName . '%');
+            }
+
+            $q->with(['unit', 'seller']);
+        },
+        'seller'
+    ]);
+
+    if (!$user->hasRole('buyer')) {
+        $query->where('user_id', $user->id);
+    }
+
+    if ($categoryName) {
+        $query->where('name', 'like', '%' . $categoryName . '%');
+    }
+
+    $categories = $query->latest()->get();
+
+    if ($categories->isEmpty()) {
+        return $this->apiResponse('No categories found.', []);
+    }
+
+    return $this->apiResponse('All categories with products fetched', $categories);
+}
 
 }

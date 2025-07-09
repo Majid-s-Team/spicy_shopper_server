@@ -10,18 +10,19 @@ use App\Traits\Paginatable;
 class ProductController extends Controller
 {
     use Paginatable;
-
     public function index(Request $request, $id = null)
     {
         $user = auth()->user();
 
         if (!$user) {
-            // return response()->json(['message' => 'Unauthenticated.'], 401);
             return $this->apiResponse('Unauthenticated.', null, 401);
-
         }
 
         $isBuyer = $user->hasRole('buyer');
+
+
+        $searchName = $request->query('name');
+
 
         if ($id) {
             $query = Product::with(['store', 'category', 'unit'])->where('id', $id);
@@ -31,21 +32,61 @@ class ProductController extends Controller
             }
 
             $product = $query->firstOrFail();
-            // return response()->json($product);
             return $this->apiResponse('Product fetched successfully', $product);
-
         }
+
 
         $query = Product::with(['store', 'category', 'unit']);
 
         if (!$isBuyer) {
             $query->where('user_id', $user->id);
         }
-        $paginated = $this->paginateQuery($query->latest());
-        return $this->apiResponse('Products fetched successfully', $paginated);
 
-        // return $this->paginateQuery($query->latest());
+        if ($searchName) {
+            $query->where('name', 'LIKE', '%' . $searchName . '%');
+        }
+
+        $paginated = $this->paginateQuery($query->latest());
+
+        return $this->apiResponse('Products fetched successfully', $paginated);
     }
+
+
+    // public function index(Request $request, $id = null)
+    // {
+    //     $user = auth()->user();
+
+    //     if (!$user) {
+    //         // return response()->json(['message' => 'Unauthenticated.'], 401);
+    //         return $this->apiResponse('Unauthenticated.', null, 401);
+
+    //     }
+
+    //     $isBuyer = $user->hasRole('buyer');
+
+    //     if ($id) {
+    //         $query = Product::with(['store', 'category', 'unit'])->where('id', $id);
+
+    //         if (!$isBuyer) {
+    //             $query->where('user_id', $user->id);
+    //         }
+
+    //         $product = $query->firstOrFail();
+    //         // return response()->json($product);
+    //         return $this->apiResponse('Product fetched successfully', $product);
+
+    //     }
+
+    //     $query = Product::with(['store', 'category', 'unit']);
+
+    //     if (!$isBuyer) {
+    //         $query->where('user_id', $user->id);
+    //     }
+    //     $paginated = $this->paginateQuery($query->latest());
+    //     return $this->apiResponse('Products fetched successfully', $paginated);
+
+    //     // return $this->paginateQuery($query->latest());
+    // }
 
     public function store(Request $request)
     {
@@ -148,7 +189,7 @@ class ProductController extends Controller
 
     public function destroy($id)
     {
-       if (auth()->user()->hasRole('buyer')) {
+        if (auth()->user()->hasRole('buyer')) {
             return $this->apiResponse('Buyers are not allowed to delete products.', null, 403);
         }
 

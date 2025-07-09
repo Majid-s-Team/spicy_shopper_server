@@ -38,17 +38,23 @@ Route::post('/reset-password', [AppAuthController::class, 'resetPassword']);
 
 Route::middleware(['auth:api'])->group(function () {
     Route::get('/store-categories/{id?}', [StoreCategoryController::class, 'index']);
+    Route::get('user/profile', [AppAuthController::class, 'getProfile']);
+    Route::post('user/profile/update', [AppAuthController::class, 'updateProfile']);
+    Route::post('user/profile/upload-image', [AppAuthController::class, 'uploadProfileImage']);
 
 });
 
 Route::middleware(['auth:api'])->group(function () {
     Route::get('/store-categories/{id}/with-stores', [StoreCategoryController::class, 'showWithStores']);
     Route::get('/product-categories/{id}/with-products', [ProductCategoryController::class, 'showWithProducts']);
+
 });
 
 
 Route::middleware(['auth:api'])->group(function () {
+    Route::get('/product-categories/with-products', [ProductCategoryController::class, 'allCategoriesWithProducts']);
     Route::get('/product-categories/{id?}', [ProductCategoryController::class, 'index']);
+
 });
 
 Route::middleware(['auth:api'])->group(function () {
@@ -75,6 +81,5 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('/cart/clear', [CartOrderController::class, 'clearCart']);
     Route::post('/checkout', [CartOrderController::class, 'checkout']);
 
-    // Optional: voucher creation routes for admin
 
 });

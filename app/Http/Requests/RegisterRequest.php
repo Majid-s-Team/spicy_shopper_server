@@ -20,14 +20,14 @@ class RegisterRequest extends FormRequest
             'role'     => 'required|exists:roles,name',
             'dob'      => 'nullable|date',
             'gender'   => 'nullable|in:male,female,other',
-            'language' => 'nullable|string|max:5',
-            'location' => 'nullable|string|max:255',
-            'address'      => 'required|string|max:255',
-            'city'         => 'nullable|string|max:100',
-            'state'        => 'nullable|string|max:100',
-            'country'      => 'nullable|string|max:100',
-            'postal_code'  => 'nullable|string|max:20',
-            'address_title'=> 'nullable|string|max:100',
+            // 'language' => 'nullable|string|max:5',
+            // 'location' => 'nullable|string|max:255',
+            // 'address'      => 'required|string|max:255',
+            // 'city'         => 'nullable|string|max:100',
+            // 'state'        => 'nullable|string|max:100',
+            // 'country'      => 'nullable|string|max:100',
+            // 'postal_code'  => 'nullable|string|max:20',
+            // 'address_title'=> 'nullable|string|max:100',
         ];
     }
 

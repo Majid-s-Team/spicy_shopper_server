@@ -188,4 +188,13 @@ class CartOrderController extends Controller
 
         }
     }
+    public function getMyOrders()
+    {
+        $orders = Order::with(['items.product', 'voucherUsage.voucher'])
+            ->where('user_id', auth()->id())
+            ->latest()
+            ->get();
+
+        return $this->apiResponse('Orders fetched successfully', $orders);
+    }
 }

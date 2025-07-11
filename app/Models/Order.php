@@ -17,4 +17,10 @@ class Order extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+public function voucherUsage()
+{
+    return $this->hasOne(OrderVoucherUsage::class);
+}
+
 }

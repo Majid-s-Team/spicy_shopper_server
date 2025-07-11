@@ -80,6 +80,7 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('/cart/remove/{id}', [CartOrderController::class, 'removeCartItem']);
     Route::delete('/cart/clear', [CartOrderController::class, 'clearCart']);
     Route::post('/checkout', [CartOrderController::class, 'checkout']);
+    Route::post('/myorder', [CartOrderController::class, 'getMyOrders']);
 
 
 });

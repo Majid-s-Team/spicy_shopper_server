@@ -12,7 +12,8 @@ use App\Http\Controllers\{
     UnitController,
     BannerController,
     CartOrderController,
-    WishlistController
+    WishlistController,
+    UserAddressController
 };
 
 /*
@@ -93,8 +94,15 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('/cart/remove/{id}', [CartOrderController::class, 'removeCartItem']);
     Route::delete('/cart/clear', [CartOrderController::class, 'clearCart']);
     Route::post('/checkout', [CartOrderController::class, 'checkout']);
-    Route::post('/myorder', [CartOrderController::class, 'getMyOrders']);
+    Route::get('/myorder', [CartOrderController::class, 'getMyOrders']);
 
     Route::get('/stores/{storeId}/products', [ProductController::class, 'productsByStore']);
-
+    Route::post('/orderStatus/{id}', [CartOrderController::class, 'updateOrderStatus']);
+    Route::post('/wishlist-folders/{folderId}/place-order', [CartOrderController::class, 'placeOrderFromFolder']);
+    
+  Route::get('/addresses', [UserAddressController::class, 'index']);
+    Route::post('/addresses', [UserAddressController::class, 'store']);
+    Route::get('/addresses/{id}', [UserAddressController::class, 'show']);
+    Route::put('/addresses/{id}', [UserAddressController::class, 'update']);
+    Route::delete('/addresses/{id}', [UserAddressController::class, 'destroy']);
 });

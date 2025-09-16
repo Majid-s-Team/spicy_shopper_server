@@ -5,6 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\{Cart, Product, Order, OrderItem,OrderVoucherUsage,Voucher};
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use App\Models\WishlistFolder;
+use App\Models\WishlistItem;
+use Illuminate\Support\Facades\Auth;
+
 
 class CartOrderController extends Controller
 {
@@ -153,7 +158,8 @@ class CartOrderController extends Controller
                 'user_id' => auth()->id(),
                 'total_amount' => $finalAmount,
                 'payment_method' => $request->payment_method,
-                'payment_status' => $request->payment_method == 'cod' ? 'pending' : 'paid'
+                'payment_status' => $request->payment_method == 'cod' ? 'pending' : 'paid',
+                'status' => 'pending'
             ]);
 
             foreach ($cartItems as $item) {
@@ -207,4 +213,73 @@ class CartOrderController extends Controller
 
         return $this->apiResponse('Orders fetched successfully', $orders);
     }
+    public function updateOrderStatus(Request $request, $orderId)
+{
+    $request->validate([
+        'status' => 'required|in:pending,confirmed,shipped,delivered,cancelled',
+    ]);
+
+    $order = Order::find($orderId);
+
+    if (!$order) {
+        return $this->apiResponse('Order not found', null, 404);
+    }
+
+    $order->status = $request->status;
+    $order->save();
+
+    return $this->apiResponse('Order status updated successfully', $order);
+}
+public function placeOrderFromFolder(Request $request, $folderId)
+{
+    $validator = Validator::make($request->all(), [
+        'scheduled_date' => 'required|date|after_or_equal:today',
+        'scheduled_time' => 'required|date_format:H:i',
+        'address_id'     => 'required|exists:user_addresses,id',
+        'payment_method' => 'required|string', // e.g. 'cod', 'card'
+    ]);
+
+    if ($validator->fails()) {
+        return $this->apiResponse('Validation Error', $validator->errors(), 422);
+    }
+
+    $folder = WishlistFolder::with('items.product')
+                ->where('user_id', Auth::id())
+                ->find($folderId);
+
+    if (!$folder || $folder->items->isEmpty()) {
+        return $this->apiResponse('Wishlist folder empty or not found', null, 404);
+    }
+
+    // Calculate total
+    $totalAmount = 0;
+    foreach ($folder->items as $item) {
+        $totalAmount += $item->product->price * $item->quantity;
+    }
+
+    // Create order
+    $order = Order::create([
+        'user_id'        => Auth::id(),
+        'address_id'     => $request->address_id,
+        'scheduled_date' => $request->scheduled_date,
+        'scheduled_time' => $request->scheduled_time,
+        'total_amount'   => $totalAmount,
+        'payment_method' => $request->payment_method,
+        'payment_status' => 'pending',
+        'status'         => 'scheduled',
+    ]);
+
+    // Create order items
+    foreach ($folder->items as $item) {
+        $order->items()->create([
+            'product_id' => $item->product_id,
+            'quantity'   => $item->quantity,
+            'price'      => $item->product->price,
+        ]);
+    }
+
+    return $this->apiResponse('Order placed successfully', $order->load('items.product', 'address'));
+}
+
+
 }

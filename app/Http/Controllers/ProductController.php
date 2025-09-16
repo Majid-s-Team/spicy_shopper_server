@@ -72,7 +72,6 @@ class ProductController extends Controller
         $query->where('name', 'LIKE', '%' . $request->query('keyword') . '%');
     }
 
-    // latest products + pagination
     $paginated = $this->paginateQuery($query->latest());
 
     return $this->apiResponse('Products fetched successfully', $paginated);

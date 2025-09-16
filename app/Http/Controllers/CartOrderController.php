@@ -204,15 +204,44 @@ class CartOrderController extends Controller
 
         }
     }
-    public function getMyOrders()
-    {
-        $orders = Order::with(['items.product', 'voucherUsage.voucher'])
-            ->where('user_id', auth()->id())
-            ->latest()
-            ->get();
+    // public function getMyOrders()
+    // {
+    //     $orders = Order::with(['items.product', 'voucherUsage.voucher'])
+    //         ->where('user_id', auth()->id())
+    //         ->latest()
+    //         ->get();
 
-        return $this->apiResponse('Orders fetched successfully', $orders);
+    //     return $this->apiResponse('Orders fetched successfully', $orders);
+    // }
+    public function getMyOrders(Request $request)
+{
+    $user = auth()->user();
+
+    if (!$user) {
+        return $this->apiResponse('Unauthenticated.', null, 401);
     }
+
+    $status = $request->query('status'); // ?status=pending
+    $allowedStatuses = ['pending', 'confirmed', 'cancelled', 'delivered', 'shipped', 'scheduled'];
+
+    $query = Order::with(['items.product', 'voucherUsage.voucher', 'address'])
+        ->where('user_id', $user->id);
+
+    if ($status) {
+        // multiple status filter e.g. ?status=pending,delivered
+        $statuses = explode(',', $status);
+        $statuses = array_intersect($statuses, $allowedStatuses);
+
+        if (!empty($statuses)) {
+            $query->whereIn('status', $statuses);
+        }
+    }
+
+    $orders = $query->latest()->paginate(10);
+
+    return $this->apiResponse('Orders fetched successfully', $orders);
+}
+
     public function updateOrderStatus(Request $request, $orderId)
 {
     $request->validate([

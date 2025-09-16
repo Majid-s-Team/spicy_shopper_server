@@ -11,7 +11,8 @@ use App\Http\Controllers\{
     ProductController,
     UnitController,
     BannerController,
-    CartOrderController
+    CartOrderController,
+    WishlistController
 };
 
 /*
@@ -37,6 +38,8 @@ Route::post('/reset-password', [AppAuthController::class, 'resetPassword']);
 
 
 Route::middleware(['auth:api'])->group(function () {
+    Route::get('/store-categories/{id?}', [StoreCategoryController::class, 'index']);
+    Route::post('/change-password', [AppAuthController::class, 'changePassword']);
     Route::get('/store-categories/{id?}', [StoreCategoryController::class, 'index']);
     Route::get('user/profile', [AppAuthController::class, 'getProfile']);
     Route::post('user/profile/update', [AppAuthController::class, 'updateProfile']);
@@ -72,6 +75,17 @@ Route::middleware(['auth:api'])->group(function () {
 Route::middleware(['auth:api'])->group(function () {
     Route::get('/stores/{id?}', [StoreController::class, 'index']);
 });
+Route::middleware(['auth:api'])->group(function () {
+ Route::post('/wishlist/folders', [WishlistController::class, 'createFolder']);
+    Route::get('/wishlist/folders', [WishlistController::class, 'getFolders']);
+    Route::put('/wishlist/folders/{id}', [WishlistController::class, 'updateFolder']);
+    Route::delete('/wishlist/folders/{id}', [WishlistController::class, 'deleteFolder']);
+
+    Route::post('/wishlist/folders/{folderId}/products', [WishlistController::class, 'addProduct']);
+
+    Route::put('/wishlist/folders/{folderId}/products/{productId}/quantity', [WishlistController::class, 'updateQuantity']);
+    Route::delete('/wishlist/folders/{folderId}/products/{productId}', [WishlistController::class, 'removeProduct']);
+});
 
 Route::middleware('auth:api')->group(function () {
     Route::post('/cart/add-multiple', [CartOrderController::class, 'addMultipleToCart']);
@@ -82,5 +96,6 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/checkout', [CartOrderController::class, 'checkout']);
     Route::post('/myorder', [CartOrderController::class, 'getMyOrders']);
 
+    Route::get('/stores/{storeId}/products', [ProductController::class, 'productsByStore']);
 
 });

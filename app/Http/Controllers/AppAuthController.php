@@ -50,58 +50,93 @@ class AppAuthController extends Controller
 ], 201);
     }
 
-    public function login(Request $request)
-    {
-        $credentials = $request->only('email', 'password');
+//     public function login(Request $request)
+//     {
+//         $credentials = $request->only('email', 'password');
 
-        if (!$token = JWTAuth::attempt($credentials)) {
-            return response()->json(['error' => 'Invalid Credentials'], 401);
-        }
+//         if (!$token = JWTAuth::attempt($credentials)) {
+//             return response()->json(['error' => 'Invalid Credentials'], 401);
+//         }
 
-        $user = auth()->user();
+//         $user = auth()->user();
 
-        if (!$user->hasRole('buyer')) {
-            return response()->json(['error' => 'Only buyer login allowed here.'], 403);
-        }
+//         if (!$user->hasRole('buyer')) {
+//             return response()->json(['error' => 'Only buyer login allowed here.'], 403);
+//         }
 
-        // return response()->json(['token' => $token, 'user' => $user]);
-        return $this->apiResponse('Login successful', [
-    'token' => $token,
-    'user' => $user
-]);
+//         // return response()->json(['token' => $token, 'user' => $user]);
+//         return $this->apiResponse('Login successful', [
+//     'token' => $token,
+//     'user' => $user
+// ]);
+//     }
+public function login(Request $request)
+{
+    $loginField = filter_var($request->input('login'), FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
+
+    $credentials = [
+        $loginField => $request->input('login'),
+        'password'  => $request->input('password')
+    ];
+
+    if (!$token = JWTAuth::attempt($credentials)) {
+        return response()->json(['error' => 'Invalid Credentials'], 401);
     }
 
-        public function forgotPassword(Request $request)
-    {
-        $request->validate([
-            'email' => 'nullable|email',
-            'phone' => 'nullable|string',
-        ]);
+    $user = auth()->user();
 
-        $contact =  $request->email ?? $request->phone;
-
-        if (!$contact) {
-            return response()->json(['error' => 'Email or phone is required.'], 422);
-        }
-
-        $otp = rand(100000, 999999);
-
-        PasswordOtp::updateOrCreate(
-            ['email' => $request->email, 'phone' => $request->phone],
-            ['otp' => $otp, 'expires_at' => Carbon::now()->addMinutes(10), 'is_verified' => false]
-        );
-
-        // You can use SMS or Mail based on the input
-        if ($request->email) {
-            Mail::raw("Your OTP is: $otp", function ($message) use ($request) {
-                $message->to($request->email)->subject('Password Reset OTP');
-            });
-        }
-
-        // return response()->json(['message' => 'OTP sent successfully.']);
-        return $this->apiResponse('OTP sent successfully');
-
+    if (!$user->hasRole('buyer')) {
+        return response()->json(['error' => 'Only buyer login allowed here.'], 403);
     }
+
+    return $this->apiResponse('Login successful', [
+        'token' => $token,
+        'user'  => $user
+    ]);
+}
+
+public function forgotPassword(Request $request)
+{
+    $request->validate([
+        'login' => 'required|string', 
+    ]);
+
+    $login = $request->login;
+
+    if (filter_var($login, FILTER_VALIDATE_EMAIL)) {
+        $user = User::where('email', $login)->first();
+        if (!$user) {
+            return $this->apiResponse('Email not found in our records.', [], 404, false);
+        }
+
+        $email = $login;
+        $phone = null;
+    } else {
+        $user = User::where('phone', $login)->first();
+        if (!$user) {
+            return $this->apiResponse('Phone number not found in our records.', [], 404, false);
+        }
+
+        $email = null;
+        $phone = $login;
+    }
+
+    $otp = '000000';
+
+    PasswordOtp::updateOrCreate(
+        ['email' => $email, 'phone' => $phone],
+        [
+            'otp'         => $otp,
+            'expires_at'  => Carbon::now()->addMinutes(10),
+            'is_verified' => false
+        ]
+    );
+
+    return $this->apiResponse('OTP sent successfully', [
+        'otp' => $otp
+    ]);
+}
+
 
     public function verifyOtp(Request $request)
     {
@@ -170,6 +205,25 @@ class AppAuthController extends Controller
         return $this->apiResponse('Password reset successful');
 
     }
+    public function changePassword(Request $request)
+    {
+        $user = auth()->user();
+
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password'     => 'required|string|min:6|confirmed'
+        ]);
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return $this->apiResponse('Current password is incorrect', [], 422);
+        }
+
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return $this->apiResponse('Password changed successfully');
+    }
+
 
     public function getProfile()
 {

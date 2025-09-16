@@ -50,6 +50,35 @@ class ProductController extends Controller
 
         return $this->apiResponse('Products fetched successfully', $paginated);
     }
+    public function productsByStore(Request $request, $storeId)
+{
+    $user = auth()->user();
+
+    if (!$user) {
+        return $this->apiResponse('Unauthenticated.', null, 401);
+    }
+
+    $isBuyer = $user->hasRole('buyer');
+
+    $query = Product::with(['store', 'category', 'unit'])
+        ->where('store_id', $storeId);
+
+    // agar buyer nahi hai to sirf apne products
+    if (!$isBuyer) {
+        $query->where('user_id', $user->id);
+    }
+
+    // optional search filter
+    if ($request->has('name')) {
+        $query->where('name', 'LIKE', '%' . $request->query('name') . '%');
+    }
+
+    // latest products + pagination
+    $paginated = $this->paginateQuery($query->latest());
+
+    return $this->apiResponse('Products fetched successfully', $paginated);
+}
+
 
 
     // public function index(Request $request, $id = null)

@@ -9,45 +9,55 @@ use Illuminate\Support\Facades\DB;
 class CartOrderController extends Controller
 {
     public function addMultipleToCart(Request $request)
-    {
-        $request->validate([
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1'
-        ]);
+{
+    $request->validate([
+        'items' => 'required|array|min:1',
+        'items.*.product_id' => 'required|exists:products,id',
+        'items.*.quantity' => 'required|integer|min:1'
+    ]);
 
-        $userId = auth()->id();
-        $responses = [];
+    $userId = auth()->id();
+    $responses = [];
 
-        foreach ($request->items as $item) {
-            $product = Product::findOrFail($item['product_id']);
+    foreach ($request->items as $item) {
+        $product = Product::findOrFail($item['product_id']);
 
-            if ($product->quantity < $item['quantity']) {
-                $responses[] = [
-                    'product_id' => $product->id,
-                    'message' => 'Insufficient stock',
-                    'status' => 'failed'
-                ];
-                continue;
-            }
-
-            $cart = Cart::updateOrCreate(
-                ['user_id' => $userId, 'product_id' => $product->id],
-                ['quantity' => DB::raw("quantity + {$item['quantity']}")]
-            );
-
+        if ($product->quantity < $item['quantity']) {
             $responses[] = [
                 'product_id' => $product->id,
-                'message' => 'Added to cart',
-                'status' => 'success'
+                'message' => 'Insufficient stock',
+                'status' => 'failed',
+                'cart' => null
             ];
+            continue;
         }
-        
-        return $this->apiResponse('Cart updated', $responses);
 
+        $cart = Cart::updateOrCreate(
+            ['user_id' => $userId, 'product_id' => $product->id],
+            ['quantity' => DB::raw("quantity + {$item['quantity']}")]
+        );
 
-        // return response()->json($responses);
+        // Refresh to get latest data
+        $cart->refresh();
+
+        $responses[] = [
+            'product_id' => $product->id,
+            'message' => 'Added to cart',
+            'status' => 'success',
+            'cart' => [
+                'id' => $cart->id,
+                'user_id' => $cart->user_id,
+                'product_id' => $cart->product_id,
+                'quantity' => $cart->quantity,
+                'created_at' => $cart->created_at,
+                'updated_at' => $cart->updated_at,
+            ]
+        ];
     }
+    
+    return $this->apiResponse('Cart updated', $responses);
+}
+
     public function updateCartItem(Request $request, $cartId)
     {
         $request->validate([

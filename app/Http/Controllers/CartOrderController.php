@@ -109,101 +109,187 @@ class CartOrderController extends Controller
         ]);
     }
 
+public function checkout(Request $request)
+{
+    $request->validate([
+        'payment_method' => 'nullable|in:cod,card,credit_debit',
+        'voucher_code'   => 'nullable|string',
+        'address_id'     => 'nullable|exists:user_addresses,id',
+        'scheduled_date' => 'nullable|date|after_or_equal:today',
+        'scheduled_time' => 'nullable|date_format:H:i',
+    ]);
 
+    $cartItems = Cart::with('product')->where('user_id', auth()->id())->get();
+    if ($cartItems->isEmpty()) {
+        return $this->apiResponse('Cart is empty.', null, 400);
+    }
 
-    public function checkout(Request $request)
-    {
-        $request->validate([
-            'payment_method' => 'required|in:cod,card,credit_debit',
-            'voucher_code' => 'nullable|string'
+    DB::beginTransaction();
+    try {
+        $total = 0;
+        foreach ($cartItems as $item) {
+            if ($item->product->quantity < $item->quantity) {
+                throw new \Exception("Product {$item->product->name} out of stock.");
+            }
+            $total += $item->product->price * $item->quantity;
+        }
 
+        $discount = 0;
+        if ($request->voucher_code) {
+            $voucher = Voucher::where('code', $request->voucher_code)->first();
+            if ($voucher && $voucher->isValid()) {
+                if ($voucher->discount_amount) {
+                    $discount = $voucher->discount_amount;
+                } elseif ($voucher->discount_percent) {
+                    $discount = ($total * $voucher->discount_percent) / 100;
+                }
+            } else {
+                return $this->apiResponse('Invalid or expired voucher.', null, 400);
+            }
+        }
+
+        $finalAmount = max($total - $discount, 0);
+
+        $order = Order::create([
+            'user_id'        => auth()->id(),
+            'address_id'     => $request->address_id,
+            'scheduled_date' => $request->scheduled_date,
+            'scheduled_time' => $request->scheduled_time,
+            'total_amount'   => $finalAmount,
+            'payment_method' => $request->payment_method ?? 'cod',
+            'payment_status' => $request->payment_method == 'cod' ? 'pending' : 'paid',
+            'status'         => $request->scheduled_date ? 'scheduled' : 'pending',
         ]);
 
-        $cartItems = Cart::with('product')->where('user_id', auth()->id())->get();
-        if ($cartItems->isEmpty()) {
-            // return response()->json(['message' => 'Cart is empty.'], 400);
-                        return $this->apiResponse('Cart is empty.', null, 400);
-
-        }
-
-        DB::beginTransaction();
-        try {
-            $total = 0;
-            foreach ($cartItems as $item) {
-                if ($item->product->quantity < $item->quantity) {
-                    throw new \Exception("Product {$item->product->name} out of stock.");
-                }
-                $total += $item->product->price * $item->quantity;
-            }
-
-            $discount = 0;
-            if ($request->voucher_code) {
-                $voucher = Voucher::where('code', $request->voucher_code)->first();
-                if ($voucher && $voucher->isValid()) {
-                    if ($voucher->discount_amount) {
-                        $discount = $voucher->discount_amount;
-                    } elseif ($voucher->discount_percent) {
-                        $discount = ($total * $voucher->discount_percent) / 100;
-                    }
-                } else {
-                    // return response()->json(['message' => 'Invalid or expired voucher.'], 400);
-                                        return $this->apiResponse('Invalid or expired voucher.', null, 400);
-
-                }
-            }
-
-            $finalAmount = max($total - $discount, 0);
-
-            $order = Order::create([
-                'user_id' => auth()->id(),
-                'total_amount' => $finalAmount,
-                'payment_method' => $request->payment_method,
-                'payment_status' => $request->payment_method == 'cod' ? 'pending' : 'paid',
-                'status' => 'pending'
+        foreach ($cartItems as $item) {
+            OrderItem::create([
+                'order_id'   => $order->id,
+                'product_id' => $item->product_id,
+                'quantity'   => $item->quantity,
+                'price'      => $item->product->price,
             ]);
 
-            foreach ($cartItems as $item) {
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $item->product_id,
-                    'quantity' => $item->quantity,
-                    'price' => $item->product->price,
-                ]);
-
-                $item->product->decrement('quantity', $item->quantity);
-            }
-
-            if ($request->voucher_code && isset($voucher)) {
-                OrderVoucherUsage::create([
-                    'order_id' => $order->id,
-                    'voucher_id' => $voucher->id,
-                    'user_id' => auth()->id(),
-                    'discount_amount' => $discount
-                ]);
-            }
-
-
-            Cart::where('user_id', auth()->id())->delete();
-
-            DB::commit();
-            // return response()->json([
-            //     'message' => 'Order placed successfully',
-            //     'order' => $order,
-            //     'discount' => $discount,
-            //     'total_before_discount' => $total
-            // ]);
-             return $this->apiResponse('Order placed successfully', [
-                'order' => $order,
-                'discount' => $discount,
-                'total_before_discount' => $total
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            // return response()->json(['error' => $e->getMessage()], 400);
-            return $this->apiResponse($e->getMessage(), null, 400);
-
+            $item->product->decrement('quantity', $item->quantity);
         }
+
+        if ($request->voucher_code && isset($voucher)) {
+            OrderVoucherUsage::create([
+                'order_id'        => $order->id,
+                'voucher_id'      => $voucher->id,
+                'user_id'         => auth()->id(),
+                'discount_amount' => $discount
+            ]);
+        }
+
+        Cart::where('user_id', auth()->id())->delete();
+
+        DB::commit();
+
+        return $this->apiResponse('Order placed successfully', [
+            'order'                => $order->load('items.product', 'address'),
+            'discount'             => $discount,
+            'total_before_discount'=> $total
+        ]);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return $this->apiResponse($e->getMessage(), null, 400);
     }
+}
+
+
+    // public function checkout(Request $request)
+    // {
+    //     $request->validate([
+    //         'payment_method' => 'required|in:cod,card,credit_debit',
+    //         'voucher_code' => 'nullable|string'
+
+    //     ]);
+
+    //     $cartItems = Cart::with('product')->where('user_id', auth()->id())->get();
+    //     if ($cartItems->isEmpty()) {
+    //         // return response()->json(['message' => 'Cart is empty.'], 400);
+    //                     return $this->apiResponse('Cart is empty.', null, 400);
+
+    //     }
+
+    //     DB::beginTransaction();
+    //     try {
+    //         $total = 0;
+    //         foreach ($cartItems as $item) {
+    //             if ($item->product->quantity < $item->quantity) {
+    //                 throw new \Exception("Product {$item->product->name} out of stock.");
+    //             }
+    //             $total += $item->product->price * $item->quantity;
+    //         }
+
+    //         $discount = 0;
+    //         if ($request->voucher_code) {
+    //             $voucher = Voucher::where('code', $request->voucher_code)->first();
+    //             if ($voucher && $voucher->isValid()) {
+    //                 if ($voucher->discount_amount) {
+    //                     $discount = $voucher->discount_amount;
+    //                 } elseif ($voucher->discount_percent) {
+    //                     $discount = ($total * $voucher->discount_percent) / 100;
+    //                 }
+    //             } else {
+    //                 // return response()->json(['message' => 'Invalid or expired voucher.'], 400);
+    //                                     return $this->apiResponse('Invalid or expired voucher.', null, 400);
+
+    //             }
+    //         }
+
+    //         $finalAmount = max($total - $discount, 0);
+
+    //         $order = Order::create([
+    //             'user_id' => auth()->id(),
+    //             'total_amount' => $finalAmount,
+    //             'payment_method' => $request->payment_method,
+    //             'payment_status' => $request->payment_method == 'cod' ? 'pending' : 'paid',
+    //             'status' => 'pending'
+    //         ]);
+
+    //         foreach ($cartItems as $item) {
+    //             OrderItem::create([
+    //                 'order_id' => $order->id,
+    //                 'product_id' => $item->product_id,
+    //                 'quantity' => $item->quantity,
+    //                 'price' => $item->product->price,
+    //             ]);
+
+    //             $item->product->decrement('quantity', $item->quantity);
+    //         }
+
+    //         if ($request->voucher_code && isset($voucher)) {
+    //             OrderVoucherUsage::create([
+    //                 'order_id' => $order->id,
+    //                 'voucher_id' => $voucher->id,
+    //                 'user_id' => auth()->id(),
+    //                 'discount_amount' => $discount
+    //             ]);
+    //         }
+
+
+    //         Cart::where('user_id', auth()->id())->delete();
+
+    //         DB::commit();
+    //         // return response()->json([
+    //         //     'message' => 'Order placed successfully',
+    //         //     'order' => $order,
+    //         //     'discount' => $discount,
+    //         //     'total_before_discount' => $total
+    //         // ]);
+    //          return $this->apiResponse('Order placed successfully', [
+    //             'order' => $order,
+    //             'discount' => $discount,
+    //             'total_before_discount' => $total
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         // return response()->json(['error' => $e->getMessage()], 400);
+    //         return $this->apiResponse($e->getMessage(), null, 400);
+
+    //     }
+    // }
     // public function getMyOrders()
     // {
     //     $orders = Order::with(['items.product', 'voucherUsage.voucher'])

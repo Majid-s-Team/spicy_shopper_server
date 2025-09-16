@@ -63,14 +63,13 @@ class ProductController extends Controller
     $query = Product::with(['store', 'category', 'unit'])
         ->where('store_id', $storeId);
 
-    // agar buyer nahi hai to sirf apne products
+
     if (!$isBuyer) {
         $query->where('user_id', $user->id);
     }
 
-    // optional search filter
-    if ($request->has('name')) {
-        $query->where('name', 'LIKE', '%' . $request->query('name') . '%');
+    if ($request->has('keyword')) {
+        $query->where('name', 'LIKE', '%' . $request->query('keyword') . '%');
     }
 
     // latest products + pagination

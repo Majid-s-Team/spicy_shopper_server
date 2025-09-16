@@ -82,7 +82,6 @@ Route::middleware(['auth:api'])->group(function () {
     Route::delete('/wishlist/folders/{id}', [WishlistController::class, 'deleteFolder']);
 
     Route::post('/wishlist/folders/{folderId}/products', [WishlistController::class, 'addProduct']);
-
     Route::put('/wishlist/folders/{folderId}/products/{productId}/quantity', [WishlistController::class, 'updateQuantity']);
     Route::delete('/wishlist/folders/{folderId}/products/{productId}', [WishlistController::class, 'removeProduct']);
 });

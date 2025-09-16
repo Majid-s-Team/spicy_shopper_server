@@ -6,7 +6,7 @@ trait Paginatable
 {
     public function paginateQuery($query)
     {
-        $perPage = request()->get('per_page', 40); 
+        $perPage = request()->get('per_page', default: 10); 
         return $query->paginate($perPage);
     }
 }

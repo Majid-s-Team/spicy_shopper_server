@@ -23,7 +23,7 @@ class ProductCategoryController extends Controller
 
         $isBuyer = $user->hasRole('buyer');
 
-        $searchName = $request->query('name');
+        $searchName = $request->query('keyword');
 
         if ($id) {
             $query = ProductCategory::where('id', $id);
@@ -202,27 +202,15 @@ class ProductCategoryController extends Controller
     }
 
 
-   public function allCategoriesWithProducts(Request $request)
+  public function allCategoriesWithProducts(Request $request)
 {
     $user = auth()->user();
 
     $categoryName = $request->query('category_name');
     $productName = $request->query('product_name');
+    $perPage = $request->get('per_page', 10); 
 
-    $query = ProductCategory::with([
-        'products' => function ($q) use ($user, $productName) {
-            if (!$user->hasRole('buyer')) {
-                $q->where('user_id', $user->id);
-            }
-
-            if ($productName) {
-                $q->where('name', 'like', '%' . $productName . '%');
-            }
-
-            $q->with(['unit', 'seller']);
-        },
-        'seller'
-    ]);
+    $query = ProductCategory::with('seller');
 
     if (!$user->hasRole('buyer')) {
         $query->where('user_id', $user->id);
@@ -238,7 +226,22 @@ class ProductCategoryController extends Controller
         return $this->apiResponse('No categories found.', []);
     }
 
+    $categories->each(function ($category) use ($user, $productName, $perPage) {
+        $productQuery = $category->products()->with(['unit', 'seller']);
+
+        if (!$user->hasRole('buyer')) {
+            $productQuery->where('user_id', $user->id);
+        }
+
+        if ($productName) {
+            $productQuery->where('name', 'like', '%' . $productName . '%');
+        }
+
+        $category->setRelation('products', $productQuery->paginate($perPage));
+    });
+
     return $this->apiResponse('All categories with products fetched', $categories);
 }
+
 
 }

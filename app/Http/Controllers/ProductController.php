@@ -21,7 +21,7 @@ class ProductController extends Controller
         // $isBuyer = $user->hasRole('buyer');
 
 
-        $searchName = $request->query('name');
+        $searchName = $request->query('keyword');
 
 
         if ($id) {

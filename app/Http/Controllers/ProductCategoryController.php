@@ -13,24 +13,24 @@ class ProductCategoryController extends Controller
 
     public function index(Request $request, $id = null)
     {
-        $user = auth()->user();
+        // $user = auth()->user();
 
-        if (!$user) {
-            return response()->json([
-                'message' => 'Unauthenticated.'
-            ], 401);
-        }
+        // if (!$user) {
+        //     return response()->json([
+        //         'message' => 'Unauthenticated.'
+        //     ], 401);
+        // }
 
-        $isBuyer = $user->hasRole('buyer');
+        // $isBuyer = $user->hasRole('buyer');
 
         $searchName = $request->query('keyword');
 
         if ($id) {
             $query = ProductCategory::where('id', $id);
 
-            if (!$isBuyer) {
-                $query->where('user_id', $user->id);
-            }
+            // if (!$isBuyer) {
+            //     $query->where('user_id', $user->id);
+            // }
 
             $category = $query->firstOrFail();
             return $this->apiResponse('Category fetched', $category);

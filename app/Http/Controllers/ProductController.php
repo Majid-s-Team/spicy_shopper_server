@@ -12,13 +12,13 @@ class ProductController extends Controller
     use Paginatable;
     public function index(Request $request, $id = null)
     {
-        $user = auth()->user();
+        // $user = auth()->user();
 
-        if (!$user) {
-            return $this->apiResponse('Unauthenticated.', null, 401);
-        }
+        // if (!$user) {
+        //     return $this->apiResponse('Unauthenticated.', null, 401);
+        // }
 
-        $isBuyer = $user->hasRole('buyer');
+        // $isBuyer = $user->hasRole('buyer');
 
 
         $searchName = $request->query('name');
@@ -27,9 +27,9 @@ class ProductController extends Controller
         if ($id) {
             $query = Product::with(['store', 'category', 'unit'])->where('id', $id);
 
-            if (!$isBuyer) {
-                $query->where('user_id', $user->id);
-            }
+            // if (!$isBuyer) {
+            //     $query->where('user_id', $user->id);
+            // }
 
             $product = $query->firstOrFail();
             return $this->apiResponse('Product fetched successfully', $product);
@@ -38,9 +38,9 @@ class ProductController extends Controller
 
         $query = Product::with(['store', 'category', 'unit']);
 
-        if (!$isBuyer) {
-            $query->where('user_id', $user->id);
-        }
+        // if (!$isBuyer) {
+        //     $query->where('user_id', $user->id);
+        // }
 
         if ($searchName) {
             $query->where('name', 'LIKE', '%' . $searchName . '%');
@@ -51,30 +51,30 @@ class ProductController extends Controller
         return $this->apiResponse('Products fetched successfully', $paginated);
     }
     public function productsByStore(Request $request, $storeId)
-{
-    $user = auth()->user();
+    {
+        // $user = auth()->user();
 
-    if (!$user) {
-        return $this->apiResponse('Unauthenticated.', null, 401);
-    }
+        // if (!$user) {
+        //     return $this->apiResponse('Unauthenticated.', null, 401);
+        // }
 
-    $isBuyer = $user->hasRole('buyer');
+        // $isBuyer = $user->hasRole('buyer');
 
-    $query = Product::with(['store', 'category', 'unit'])
-        ->where('store_id', $storeId);
+        $query = Product::with(['store', 'category', 'unit'])
+            ->where('store_id', $storeId);
 
 
-    if (!$isBuyer) {
-        $query->where('user_id', $user->id);
-    }
+        // if (!$isBuyer) {
+        //     $query->where('user_id', $user->id);
+        // }
 
-    if ($request->has('keyword')) {
-        $query->where('name', 'LIKE', '%' . $request->query('keyword') . '%');
-    }
+        if ($request->has('keyword')) {
+            $query->where('name', 'LIKE', '%' . $request->query('keyword') . '%');
+        }
 
-    $paginated = $this->paginateQuery($query->latest());
+        $paginated = $this->paginateQuery($query->latest());
 
-    return $this->apiResponse('Products fetched successfully', $paginated);
+        return $this->apiResponse('Products fetched successfully', $paginated);
 }
 
 

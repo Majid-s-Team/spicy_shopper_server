@@ -37,6 +37,15 @@ Route::post('/forgot-password', [AppAuthController::class, 'forgotPassword']);
 Route::post('/verify-otp', [AppAuthController::class, 'verifyOtp']);
 Route::post('/reset-password', [AppAuthController::class, 'resetPassword']);
 
+// Guest Login
+Route::get('/product-categories/{id?}', [ProductCategoryController::class, 'index']);
+Route::get('/stores/{id?}', [StoreController::class, 'index']);
+Route::get('/products/{id?}', [ProductController::class, 'index']);
+Route::get('/stores/{storeId}/products', [ProductController::class, 'productsByStore']);
+Route::get('/product-categories/with-products', [ProductCategoryController::class, 'allCategoriesWithProducts']);
+
+
+//Guest Login Close
 
 Route::middleware(['auth:api'])->group(function () {
     Route::get('/store-categories/{id?}', [StoreCategoryController::class, 'index']);
@@ -56,13 +65,10 @@ Route::middleware(['auth:api'])->group(function () {
 
 
 Route::middleware(['auth:api'])->group(function () {
-    Route::get('/product-categories/with-products', [ProductCategoryController::class, 'allCategoriesWithProducts']);
-    Route::get('/product-categories/{id?}', [ProductCategoryController::class, 'index']);
 
 });
 
 Route::middleware(['auth:api'])->group(function () {
-    Route::get('/products/{id?}', [ProductController::class, 'index']);
 });
 
 Route::middleware(['auth:api'])->group(function () {
@@ -74,7 +80,6 @@ Route::middleware(['auth:api'])->group(function () {
 });
 
 Route::middleware(['auth:api'])->group(function () {
-    Route::get('/stores/{id?}', [StoreController::class, 'index']);
 });
 Route::middleware(['auth:api'])->group(function () {
  Route::post('/wishlist/folders', [WishlistController::class, 'createFolder']);
@@ -96,7 +101,6 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/checkout', [CartOrderController::class, 'checkout']);
     Route::get('/myorder', [CartOrderController::class, 'getMyOrders']);
 
-    Route::get('/stores/{storeId}/products', [ProductController::class, 'productsByStore']);
     Route::post('/orderStatus/{id}', [CartOrderController::class, 'updateOrderStatus']);
     Route::post('/wishlist-folders/{folderId}/place-order', [CartOrderController::class, 'placeOrderFromFolder']);
     

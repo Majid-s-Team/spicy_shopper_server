@@ -202,46 +202,76 @@ class ProductCategoryController extends Controller
     }
 
 
-  public function allCategoriesWithProducts(Request $request)
-{
-    $user = auth()->user();
+//   public function allCategoriesWithProducts(Request $request)
+// {
+//     $user = auth()->user();
 
-    $categoryName = $request->query('category_name');
-    $productName = $request->query('product_name');
-    $perPage = $request->get('per_page', 10); 
+//     $categoryName = $request->query('category_name');
+//     $productName = $request->query('product_name');
+//     $perPage = $request->get('per_page', 10); 
 
-    $query = ProductCategory::with('seller');
+//     $query = ProductCategory::with('seller');
 
-    if (!$user->hasRole('buyer')) {
-        $query->where('user_id', $user->id);
-    }
+//     if (!$user->hasRole('buyer')) {
+//         $query->where('user_id', $user->id);
+//     }
 
-    if ($categoryName) {
-        $query->where('name', 'like', '%' . $categoryName . '%');
-    }
+//     if ($categoryName) {
+//         $query->where('name', 'like', '%' . $categoryName . '%');
+//     }
 
-    $categories = $query->latest()->get();
+//     $categories = $query->latest()->get();
 
-    if ($categories->isEmpty()) {
-        return $this->apiResponse('No categories found.', []);
-    }
+//     if ($categories->isEmpty()) {
+//         return $this->apiResponse('No categories found.', []);
+//     }
 
-    $categories->each(function ($category) use ($user, $productName, $perPage) {
-        $productQuery = $category->products()->with(['unit', 'seller']);
+//     $categories->each(function ($category) use ($user, $productName, $perPage) {
+//         $productQuery = $category->products()->with(['unit', 'seller']);
 
-        if (!$user->hasRole('buyer')) {
-            $productQuery->where('user_id', $user->id);
+//         if (!$user->hasRole('buyer')) {
+//             $productQuery->where('user_id', $user->id);
+//         }
+
+//         if ($productName) {
+//             $productQuery->where('name', 'like', '%' . $productName . '%');
+//         }
+
+//         $category->setRelation('products', $productQuery->paginate($perPage));
+//     });
+
+//     return $this->apiResponse('All categories with products fetched', $categories);
+// }
+
+    public function allCategoriesWithProducts(Request $request)
+    {
+        $categoryName = $request->query('category_name');
+        $productName = $request->query('product_name');
+        $perPage = $request->get('per_page', 10); 
+
+        $query = ProductCategory::with('seller');
+
+        if ($categoryName) {
+            $query->where('name', 'like', '%' . $categoryName . '%');
         }
 
-        if ($productName) {
-            $productQuery->where('name', 'like', '%' . $productName . '%');
+        $categories = $query->latest()->get();
+
+        if ($categories->isEmpty()) {
+            return $this->apiResponse('No categories found.', []);
         }
 
-        $category->setRelation('products', $productQuery->paginate($perPage));
-    });
+        $categories->each(function ($category) use ($productName, $perPage) {
+            $productQuery = $category->products()->with(['unit', 'seller']);
 
-    return $this->apiResponse('All categories with products fetched', $categories);
-}
+            if ($productName) {
+                $productQuery->where('name', 'like', '%' . $productName . '%');
+            }
 
+            $category->setRelation('products', $productQuery->paginate($perPage));
+        });
+
+        return $this->apiResponse('All categories with products fetched', $categories);
+    }
 
 }

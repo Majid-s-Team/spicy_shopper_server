@@ -13,20 +13,20 @@ class StoreController extends Controller
 
     public function index(Request $request, $id = null)
     {
-        $user = auth()->user();
+        // $user = auth()->user();
 
-        if (!$user) {
-            return $this->apiResponse('Unauthenticated.', null, 401);
-        }
+        // if (!$user) {
+        //     return $this->apiResponse('Unauthenticated.', null, 401);
+        // }
 
-        $isBuyer = $user->hasRole('buyer');
+        // $isBuyer = $user->hasRole('buyer');
 
         if ($id) {
             $query = Store::with(['category', 'user'])->where('id', $id);
 
-            if (!$isBuyer) {
-                $query->where('user_id', $user->id);
-            }
+            // if (!$isBuyer) {
+            //     $query->where('user_id', $user->id);
+            // }
 
             $store = $query->firstOrFail();
             return $this->apiResponse('Store fetched successfully', $store);
@@ -34,9 +34,9 @@ class StoreController extends Controller
 
         $query = Store::with(['category', 'user']);
 
-        if (!$isBuyer) {
-            $query->where('user_id', $user->id);
-        }
+        // if (!$isBuyer) {
+        //     $query->where('user_id', $user->id);
+        // }
 
         return $this->apiResponse('Stores fetched successfully', $this->paginateQuery($query->latest()));
     }

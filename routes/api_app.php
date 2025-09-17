@@ -42,8 +42,15 @@ Route::get('/product-categories/{id?}', [ProductCategoryController::class, 'inde
 Route::get('/stores/{id?}', [StoreController::class, 'index']);
 Route::get('/products/{id?}', [ProductController::class, 'index']);
 Route::get('/stores/{storeId}/products', [ProductController::class, 'productsByStore']);
-Route::get('/product-categories/with-products', [ProductCategoryController::class, 'allCategoriesWithProducts']);
 
+Route::get('/product-categories', [ProductCategoryController::class, 'index']);
+
+Route::get('/product-categories/{id}', [ProductCategoryController::class, 'show']);
+
+
+Route::get('/product-categories-all/with-products', [ProductCategoryController::class, 'allCategoriesWithProducts']);
+Route::get('/product-categories/{id}', [ProductCategoryController::class, 'show']);
+Route::get('/product-categories/{id}/with-products', [ProductCategoryController::class, 'showWithProducts']);
 
 //Guest Login Close
 
@@ -59,7 +66,6 @@ Route::middleware(['auth:api'])->group(function () {
 
 Route::middleware(['auth:api'])->group(function () {
     Route::get('/store-categories/{id}/with-stores', [StoreCategoryController::class, 'showWithStores']);
-    Route::get('/product-categories/{id}/with-products', [ProductCategoryController::class, 'showWithProducts']);
 
 });
 

@@ -119,14 +119,17 @@ class ProductCategoryController extends Controller
         return $this->apiResponse('Category created successfully', $category, 201);
     }
 
-    public function show($id)
-    {
-        $cat = ProductCategory::where('id', $id)
-            ->where('user_id', auth()->id())
-            ->firstOrFail();
+public function show($id)
+{
+    $cat = ProductCategory::find($id);
 
-        return $this->apiResponse('Category fetched', $cat);
+    if (!$cat) {
+        return $this->apiResponse('Category not found.', null, 404);
     }
+
+    return $this->apiResponse('Category fetched', $cat);
+}
+
 
     public function update(Request $request, $id)
     {
@@ -178,28 +181,21 @@ class ProductCategoryController extends Controller
         return $this->apiResponse('Category deleted successfully');
     }
 
-    public function showWithProducts($id)
-    {
-        $user = auth()->user();
+   public function showWithProducts($id)
+{
+    $category = ProductCategory::with([
+        'products' => function ($q) {
+            $q->with(['unit', 'seller']);
+        },
+        'seller'
+    ])->where('id', $id)->first();
 
-        $query = ProductCategory::with([
-            'products' => function ($q) use ($user) {
-                if (!$user->hasRole('buyer')) {
-                    $q->where('user_id', $user->id);
-                }
-                $q->with(['unit', 'seller']);
-            },
-            'seller'
-        ])->where('id', $id);
-
-        if (!$user->hasRole('buyer')) {
-            $query->where('user_id', $user->id);
-        }
-
-        $category = $query->firstOrFail();
-
-        return $this->apiResponse('Category with products fetched', $category);
+    if (!$category) {
+        return $this->apiResponse('Category not found.', null, 404);
     }
+
+    return $this->apiResponse('Category with products fetched', $category);
+}
 
 
 //   public function allCategoriesWithProducts(Request $request)

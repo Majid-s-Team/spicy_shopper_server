@@ -39,9 +39,9 @@ class ProductCategoryController extends Controller
 
         $query = ProductCategory::query();
 
-        if (!$isBuyer) {
-            $query->where('user_id', $user->id);
-        }
+        // if (!$isBuyer) {
+        //     $query->where('user_id', $user->id);
+        // }
 
         if ($searchName) {
             $query->where('name', 'LIKE', '%' . $searchName . '%');

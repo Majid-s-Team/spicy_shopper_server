@@ -6,6 +6,9 @@ use App\Models\ProductCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use App\Traits\Paginatable;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use Tymon\JWTAuth\Exceptions\JWTException;
+
 
 class ProductCategoryController extends Controller
 {

@@ -38,5 +38,9 @@ class Product extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+        public function wishlistItems()
+{
+    return $this->hasMany(WishlistItem::class, 'product_id');
+}
 
 }

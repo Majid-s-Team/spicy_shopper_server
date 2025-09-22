@@ -239,35 +239,92 @@ public function show($id)
 //     return $this->apiResponse('All categories with products fetched', $categories);
 // }
 
+    // public function allCategoriesWithProducts(Request $request)
+    // {
+    //     $categoryName = $request->query('category_name');
+    //     $productName = $request->query('product_name');
+    //     $perPage = $request->get('per_page', 10); 
+
+    //     $query = ProductCategory::with('seller');
+
+    //     if ($categoryName) {
+    //         $query->where('name', 'like', '%' . $categoryName . '%');
+    //     }
+
+    //     $categories = $query->latest()->get();
+
+    //     if ($categories->isEmpty()) {
+    //         return $this->apiResponse('No categories found.', []);
+    //     }
+
+    //     $categories->each(function ($category) use ($productName, $perPage) {
+    //         $productQuery = $category->products()->with(['unit', 'seller']);
+
+    //         if ($productName) {
+    //             $productQuery->where('name', 'like', '%' . $productName . '%');
+    //         }
+
+    //         $category->setRelation('products', $productQuery->paginate($perPage));
+    //     });
+
+    //     return $this->apiResponse('All categories with products fetched', $categories);
+    // }
     public function allCategoriesWithProducts(Request $request)
-    {
-        $categoryName = $request->query('category_name');
-        $productName = $request->query('product_name');
-        $perPage = $request->get('per_page', 10); 
+{
+    try {
+        $user = JWTAuth::parseToken()->authenticate();
+    } catch (JWTException $e) {
+        $user = null;
+    }
 
-        $query = ProductCategory::with('seller');
+    $categoryName = $request->query('category_name');
+    $productName  = $request->query('product_name');
+    $perPage      = $request->get('per_page', 10);
 
-        if ($categoryName) {
-            $query->where('name', 'like', '%' . $categoryName . '%');
+    $query = ProductCategory::with('seller');
+
+    if ($categoryName) {
+        $query->where('name', 'like', '%' . $categoryName . '%');
+    }
+
+    $categories = $query->latest()->get();
+
+    if ($categories->isEmpty()) {
+        return $this->apiResponse('No categories found.', []);
+    }
+
+    $categories->each(function ($category) use ($productName, $perPage, $user) {
+        $productQuery = $category->products()->with(['unit', 'seller']);
+
+        if ($user) {
+            $productQuery->withCount(['wishlistItems as wishlist_count' => function ($q) use ($user) {
+                $q->whereHas('folder', function ($sub) use ($user) {
+                    $sub->where('user_id', $user->id);
+                });
+            }]);
+        } else {
+            $productQuery->withCount(['wishlistItems as wishlist_count' => function ($q) {
+                $q->whereRaw('0 = 1');
+            }]);
         }
 
-        $categories = $query->latest()->get();
-
-        if ($categories->isEmpty()) {
-            return $this->apiResponse('No categories found.', []);
+        if ($productName) {
+            $productQuery->where('name', 'like', '%' . $productName . '%');
         }
 
-        $categories->each(function ($category) use ($productName, $perPage) {
-            $productQuery = $category->products()->with(['unit', 'seller']);
+        $paginatedProducts = $productQuery->paginate($perPage);
 
-            if ($productName) {
-                $productQuery->where('name', 'like', '%' . $productName . '%');
-            }
-
-            $category->setRelation('products', $productQuery->paginate($perPage));
+        $paginatedProducts->getCollection()->transform(function ($product) {
+            $product->is_favourite = $product->wishlist_count > 0;
+            unset($product->wishlist_count);
+            return $product;
         });
 
-        return $this->apiResponse('All categories with products fetched', $categories);
-    }
+        $category->setRelation('products', $paginatedProducts);
+    });
+
+    return $this->apiResponse('All categories with products fetched', $categories);
+}
+
 
 }

@@ -72,6 +72,30 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasOne(Store::class, 'user_id');
     }
+public function wishlistFolders()
+{
+    return $this->hasMany(WishlistFolder::class, 'user_id');
+}
+
+public function wishlistItems()
+{
+    // user ke saare folders ke through items
+    return $this->hasManyThrough(
+        WishlistItem::class,
+        WishlistFolder::class,
+        'user_id',         // Foreign key on wishlist_folders table
+        'wishlist_folder_id', // Foreign key on wishlist_items table
+        'id',              // Local key on users table
+        'id'               // Local key on wishlist_folders table
+    );
+}
+
+public function favouriteProducts()
+{
+    return $this->belongsToMany(Product::class, 'wishlist_items', 'wishlist_folder_id', 'product_id')
+        ->using(WishlistItem::class)
+        ->withTimestamps();
+}
 
 
 }

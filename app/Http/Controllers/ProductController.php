@@ -6,75 +6,110 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use App\Traits\Paginatable;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use Tymon\JWTAuth\Exceptions\JWTException;
 
 class ProductController extends Controller
 {
     use Paginatable;
-    public function index(Request $request, $id = null)
-    {
-        // $user = auth()->user();
+    
+   public function index(Request $request, $id = null)
+{
+    // $user = JWTAuth::parseToken()->authenticate(); 
+     try {
+        $user = JWTAuth::parseToken()->authenticate();
+    } catch (JWTException $e) {
+        $user = null;
+    }
+    $searchName = $request->query('keyword');
 
-        // if (!$user) {
-        //     return $this->apiResponse('Unauthenticated.', null, 401);
-        // }
-
-        // $isBuyer = $user->hasRole('buyer');
-
-
-        $searchName = $request->query('keyword');
-
-
-        if ($id) {
-            $query = Product::with(['store', 'category', 'unit'])->where('id', $id);
-
-            // if (!$isBuyer) {
-            //     $query->where('user_id', $user->id);
-            // }
-
-            $product = $query->firstOrFail();
-            return $this->apiResponse('Product fetched successfully', $product);
-        }
-
-
+    if ($id) {
         $query = Product::with(['store', 'category', 'unit']);
 
-        // if (!$isBuyer) {
-        //     $query->where('user_id', $user->id);
-        // }
-
-        if ($searchName) {
-            $query->where('name', 'LIKE', '%' . $searchName . '%');
+        if ($user) {
+            $query->withCount(['wishlistItems as wishlist_count' => function ($q) use ($user) {
+                $q->whereHas('folder', function ($sub) use ($user) {
+                    $sub->where('user_id', $user->id);
+                });
+            }]);
+        } else {
+            $query->withCount(['wishlistItems as wishlist_count' => function ($q) {
+                $q->whereRaw('0 = 1');
+            }]);
         }
 
-        $paginated = $this->paginateQuery($query->latest());
+        $product = $query->where('id', $id)->firstOrFail();
+        $product->is_favourite = $product->wishlist_count > 0;
+        unset($product->wishlist_count);
 
-        return $this->apiResponse('Products fetched successfully', $paginated);
+        return $this->apiResponse('Product fetched successfully', $product);
     }
+
+    $query = Product::with(['store', 'category', 'unit']);
+
+    if ($user) {
+        $query->withCount(['wishlistItems as wishlist_count' => function ($q) use ($user) {
+            $q->whereHas('folder', function ($sub) use ($user) {
+                $sub->where('user_id', $user->id);
+            });
+        }]);
+    } else {
+        $query->withCount(['wishlistItems as wishlist_count' => function ($q) {
+            $q->whereRaw('0 = 1'); 
+        }]);
+    }
+
+    if ($searchName) {
+        $query->where('name', 'LIKE', '%' . $searchName . '%');
+    }
+
+    $paginated = $this->paginateQuery($query->latest());
+
+    $paginated->getCollection()->transform(function ($product) {
+        $product->is_favourite = $product->wishlist_count > 0;
+        unset($product->wishlist_count);
+        return $product;
+    });
+
+    return $this->apiResponse('Products fetched successfully', $paginated);
+}
+
     public function productsByStore(Request $request, $storeId)
-    {
-        // $user = auth()->user();
+{
+    try {
+        $user = JWTAuth::parseToken()->authenticate();
+    } catch (JWTException $e) {
+        $user = null;
+    }
 
-        // if (!$user) {
-        //     return $this->apiResponse('Unauthenticated.', null, 401);
-        // }
+    $query = Product::with(['store', 'category', 'unit'])
+        ->where('store_id', $storeId);
 
-        // $isBuyer = $user->hasRole('buyer');
+    if ($user) {
+        $query->withCount(['wishlistItems as wishlist_count' => function ($q) use ($user) {
+            $q->whereHas('folder', function ($sub) use ($user) {
+                $sub->where('user_id', $user->id);
+            });
+        }]);
+    } else {
+        $query->withCount(['wishlistItems as wishlist_count' => function ($q) {
+            $q->whereRaw('0 = 1');
+        }]);
+    }
 
-        $query = Product::with(['store', 'category', 'unit'])
-            ->where('store_id', $storeId);
+    if ($request->has('keyword')) {
+        $query->where('name', 'LIKE', '%' . $request->query('keyword') . '%');
+    }
 
+    $paginated = $this->paginateQuery($query->latest());
 
-        // if (!$isBuyer) {
-        //     $query->where('user_id', $user->id);
-        // }
+    $paginated->getCollection()->transform(function ($product) {
+        $product->is_favourite = $product->wishlist_count > 0;
+        unset($product->wishlist_count);
+        return $product;
+    });
 
-        if ($request->has('keyword')) {
-            $query->where('name', 'LIKE', '%' . $request->query('keyword') . '%');
-        }
-
-        $paginated = $this->paginateQuery($query->latest());
-
-        return $this->apiResponse('Products fetched successfully', $paginated);
+    return $this->apiResponse('Products fetched successfully', $paginated);
 }
 
 

@@ -10,12 +10,14 @@ class WishlistItem extends Model
     use HasFactory;
 
     protected $fillable = ['wishlist_folder_id', 'product_id','quantity'];
-
     public function folder() {
-        return $this->belongsTo(WishlistFolder::class);
+        return $this->belongsTo(WishlistFolder::class, 'wishlist_folder_id');
     }
+
 
     public function product() {
         return $this->belongsTo(Product::class);
     }
+
+
 }
